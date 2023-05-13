@@ -183,7 +183,8 @@ const additionalMetadataFromBooksDB = [
 		label: 'Rating',
 	},
 ]
-
+const mergeData = [...data, ...additionalDataFromBooksDB]
+console.log(mergeData)
 const searchInputElement = document.body.querySelector('input.search-input')
 const searchButtonElement = document.body.querySelector('button.search-go')
 const searchResetElement = document.body.querySelector('button.search-reset')
@@ -197,10 +198,6 @@ const fillButtonElement = document.body.querySelector('button.function-fill')
 const countButtonElement = document.body.querySelector('button.function-count')
 const computeTotalsButtonElement = document.body.querySelector('button.function-totals')
 const resetFunctionButtonElement = document.body.querySelector('button.function-reset')
-
-const numberCells = document.getElementsByClassName('number')
-const heading = document.getElementsByTagName('thead')
-const tableBody = document.getElementsByTagName('tbody')
 
 class Grid {
 	constructor() {
@@ -221,7 +218,9 @@ class Grid {
 		this.table = document.createElement('table')
 
 		this.head = this.table.createTHead()
+		this.head.setAttribute('id', 'thead')
 		this.body = this.table.createTBody()
+		this.body.setAttribute('id', 'tbody')
 
 		this.renderHead()
 		this.renderBody()
@@ -266,7 +265,9 @@ class Grid {
 		columnResetElement.addEventListener('click', this.onColumnReset.bind(this))
 
 		markButtonElement.addEventListener('click', this.onMarkEmptyClick.bind(this))
-		fillButtonElement.addEventListener('click', this.onFillTableClick.bind(this))
+		fillButtonElement.addEventListener('click', () => {
+			this.onFillTableClick(), this.onMarkEmptyClick()
+		})
 		countButtonElement.addEventListener('click', this.onCountEmptyClick.bind(this))
 		computeTotalsButtonElement.addEventListener('click', this.onComputeTotalsClick.bind(this))
 		resetFunctionButtonElement.addEventListener('click', this.onFunctionsResetClick.bind(this))
@@ -297,9 +298,11 @@ class Grid {
 
 	onColumnHideClick(event) {
 		console.error(`Hiding first visible column from the left...`)
+		const headingTable = document.getElementById('thead')
+		const headingRow = headingTable.firstChild
 
-		const headingRow = heading.item(0).firstChild
-		const tableBodyRow = tableBody.item(0).children
+		const tableBody = document.getElementById('tbody')
+		const tableBodyRow = tableBody.children
 
 		for (let i = 0; i < tableBodyRow.length; i++) {
 			const cell = tableBodyRow.item(i).children
@@ -323,8 +326,11 @@ class Grid {
 	onColumnShowClick(event) {
 		console.error(`Showing first hidden column from the left...`)
 
-		const headingRow = heading.item(0).firstChild
-		const tableBodyRow = tableBody.item(0).children
+		const headingTable = document.getElementById('thead')
+		const headingRow = headingTable.firstChild
+
+		const tableBody = document.getElementById('tbody')
+		const tableBodyRow = tableBody.children
 
 		for (let i = 0; i < headingRow.children.length; i++) {
 			if (headingRow.children.item(i).style.display === 'none') {
@@ -346,8 +352,11 @@ class Grid {
 
 	onColumnReset(event) {
 		console.error(`Resetting column visibility...`)
-		const headingRow = heading.item(0).firstChild
-		const tableBodyRow = tableBody.item(0).children
+		const headingTable = document.getElementById('thead')
+		const headingRow = headingTable.firstChild
+
+		const tableBody = document.getElementById('tbody')
+		const tableBodyRow = tableBody.children
 
 		for (let i = 0; i < headingRow.children.length; i++) {
 			headingRow.children.item(i).style.display = 'table-cell'
@@ -363,22 +372,48 @@ class Grid {
 
 	onMarkEmptyClick(event) {
 		console.error(`Marking empty cells...`)
+		const tableBody = document.getElementById('tbody')
+		const numberCells = tableBody.getElementsByClassName('number')
 
 		for (const cell of numberCells) {
 			if (cell.textContent === '') {
 				cell.style.borderColor = '#FF0000'
 				cell.style.borderStyle = 'solid'
+			} else {
+				cell.style.borderStyle = 'none'
 			}
 		}
 	}
 
 	onFillTableClick(event) {
 		console.error(`Filling empty cells with data...`)
+		const tableBody = document.getElementById('tbody')
+
+		for (const row of tableBody.rows) {
+			let quantity = +row.children[2].textContent
+			let unitPrice = +row.children[3].textContent
+			let total = +row.children[4].textContent
+
+			if (quantity !== 0 && unitPrice !== 0) {
+				total = quantity * unitPrice
+				row.children[4].textContent = total
+			} else if (quantity !== 0 && total !== 0) {
+				unitPrice = total / quantity
+				row.children[3].textContent = unitPrice
+			} else if (unitPrice !== 0 && total !== 0) {
+				quantity = total / unitPrice
+				row.children[2].textContent = quantity
+			}
+		}
 	}
 
 	onCountEmptyClick(event) {
 		console.error(`Counting amount of empty cells...`)
+		const tableBody = document.getElementById('tbody')
+		const numberCells = tableBody.getElementsByClassName('number')
+
 		let count = 0
+
 		for (const cell of numberCells) {
 			if (cell.textContent.trim() === '') {
 				count++
@@ -389,6 +424,12 @@ class Grid {
 
 	onComputeTotalsClick(event) {
 		console.error(`Computing summary totals...`)
+		const tableBody = document.getElementById('tbody')
+		let sum = 0
+		for (const row of tableBody.rows) {
+			sum += +row.children[4].textContent
+		}
+		alert(`Sum of "Total (Quantity * Unit price)" equals ${sum}`)
 	}
 
 	onFunctionsResetClick(event) {
