@@ -183,8 +183,54 @@ const additionalMetadataFromBooksDB = [
 		label: 'Rating',
 	},
 ]
-const mergeData = [...data, ...additionalDataFromBooksDB]
-console.log(mergeData)
+const dataSummary = []
+const metaSummary = [
+	{
+		id: 'author',
+		type: 'string',
+		label: 'Author',
+	},
+	{
+		id: 'titles',
+		type: 'number',
+		label: 'Titles',
+	},
+	{
+		id: 'totalQuantity',
+		type: 'number',
+		label: 'Total Quantity',
+	},
+	{
+		id: 'totalRevenue',
+		type: 'number',
+		label: 'Total Revenue',
+	},
+	{
+		id: 'avgQuantity',
+		type: 'number',
+		label: 'Avg Quantity',
+	},
+	{
+		id: 'avgUnitPrice',
+		type: 'number',
+		label: 'Avg Unit Price',
+	},
+]
+
+const updatedData = [...data]
+
+for (let i = 0; i < data.length; i++) {
+	if (data[i].title === additionalDataFromBooksDB[i].title && data[i].author === additionalDataFromBooksDB[i].author) {
+		updatedData[i] = { ...data[i], ...additionalDataFromBooksDB[i] }
+	}
+}
+
+const updatedMetaData = [...metadata]
+
+for (let i = 0; i < metadata.length; i++) {
+	if (metadata[i].id !== additionalMetadataFromBooksDB[i].id) updatedMetaData.push(additionalMetadataFromBooksDB[i])
+}
+
 const searchInputElement = document.body.querySelector('input.search-input')
 const searchButtonElement = document.body.querySelector('button.search-go')
 const searchResetElement = document.body.querySelector('button.search-reset')
@@ -201,8 +247,8 @@ const resetFunctionButtonElement = document.body.querySelector('button.function-
 
 class Grid {
 	constructor() {
-		this.data = data
-		this.metadata = metadata
+		this.data = updatedData
+		this.metadata = updatedMetaData
 
 		// HINT: below map can be useful for view operations ;))
 		this.dataViewRef = new Map()
@@ -434,11 +480,135 @@ class Grid {
 
 	onFunctionsResetClick(event) {
 		console.error(`Resetting all function...`)
+		const tableBody = document.getElementById('tbody')
+		const headingBody = document.getElementById('thead')
+		tableBody.innerHTML = ''
+		headingBody.innerHTML = ''
+		this.renderHead()
+		this.renderBody()
+	}
+}
 
-		for (const cell of numberCells) {
-			cell.style.borderStyle = 'none'
+class Summary {
+	constructor() {
+		this.data = updatedData
+		this.summaryData = dataSummary
+		this.metadata = metaSummary
+		this.authors = []
+
+		Object.freeze(this.data)
+		Object.freeze(this.metadata)
+
+		this.prepareDataSummary()
+		this.calculateDataSummary()
+		this.render()
+	}
+
+	render() {
+		this.table = document.createElement('table')
+
+		this.head = this.table.createTHead()
+		this.head.setAttribute('id', 'thead')
+		this.body = this.table.createTBody()
+		this.body.setAttribute('id', 'tbody')
+
+		this.renderHead()
+		this.renderBody()
+
+		document.body.append(this.table)
+	}
+
+	renderHead() {
+		const row = this.head.insertRow()
+
+		for (const column of this.metadata) {
+			const cell = row.insertCell()
+			cell.style.display = 'table-cell'
+			cell.innerText = column.label
+		}
+	}
+
+	renderBody() {
+		for (const dataRow of this.summaryData) {
+			const row = this.body.insertRow()
+
+			for (const column of this.metadata) {
+				const cell = row.insertCell()
+
+				cell.classList.add(column.type)
+				cell.style.display = 'table-cell'
+				cell.innerText = dataRow[column.id]
+			}
+		}
+	}
+	prepareDataSummary() {
+		for (let itemData = 0; itemData < this.data.length; itemData++) {
+			let author = this.data[itemData].author
+
+			for (const searchedAuthor of this.authors) {
+				if (searchedAuthor.author.includes(author)) {
+					this.authors.pop(author)
+				}
+			}
+			this.authors.push({ author: author })
+		}
+		for (let itemData = 0; itemData < this.authors.length; itemData++) {
+			let author = this.authors[itemData].author
+			let titles = 0
+			let totalQuantity = 0
+			let totalRevenue = 0
+			let avgQuantity = 0
+			let avgUnitPrice = 0
+
+			dataSummary[itemData] = {
+				author: author,
+				titles: titles,
+				totalQuantity: totalQuantity,
+				totalRevenue: totalRevenue,
+				avgQuantity: avgQuantity,
+				avgUnitPrice: avgUnitPrice,
+			}
+		}
+	}
+	calculateDataSummary() {
+		for (let itemData = 0; itemData < this.data.length; itemData++) {
+			let quantity = this.data[itemData].quantity === null ? 0 : this.data[itemData].quantity
+			let unitPrice = this.data[itemData].unit_price === null ? 0 : this.data[itemData].unit_price
+			let totalValue = this.data[itemData].total_value === null ? 0 : this.data[itemData].total_value
+
+			let updatedQuantity
+			let updatedUnitPrice
+			let updatedTotalValue
+
+			if (quantity !== 0 && unitPrice !== 0) {
+				updatedTotalValue = quantity * unitPrice
+				updatedQuantity = quantity
+				updatedUnitPrice = unitPrice
+			} else if (quantity !== 0 && totalValue !== 0) {
+				updatedUnitPrice = totalValue / quantity
+				updatedQuantity = quantity
+				updatedTotalValue = quantity * unitPrice
+			} else if (unitPrice !== 0 && totalValue !== 0) {
+				updatedQuantity = totalValue / unitPrice
+				updatedUnitPrice = unitPrice
+				updatedTotalValue = quantity * unitPrice
+			}
+
+			for (let i = 0; i < this.summaryData.length; i++) {
+				if (this.data[itemData].author === this.summaryData[i].author) {
+					this.summaryData[i].titles = this.summaryData[i].titles + 1
+					this.summaryData[i].totalQuantity = this.summaryData[i].totalQuantity + updatedQuantity
+					this.summaryData[i].avgQuantity = (this.summaryData[i].totalQuantity / this.summaryData[i].titles).toFixed(2)
+
+					this.summaryData[i].totalRevenue = this.summaryData[i].totalRevenue + updatedQuantity * updatedUnitPrice
+					this.summaryData[i].avgUnitPrice = (
+						this.summaryData[i].totalRevenue / this.summaryData[i].totalQuantity
+					).toFixed(2)
+				}
+			}
 		}
 	}
 }
 
 new Grid()
+new Summary()
