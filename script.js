@@ -65,6 +65,7 @@ const data = [
 		total_value: null,
 	},
 ]
+console.log(data)
 const metadata = [
 	{
 		id: 'title',
@@ -496,7 +497,7 @@ class Summary {
 		this.data = updatedData
 		this.summaryData = dataSummary
 		this.metadata = metaSummary
-		this.authors = []
+		this.authors = new Set([])
 
 		Object.freeze(this.data)
 		Object.freeze(this.metadata)
@@ -543,32 +544,20 @@ class Summary {
 			}
 		}
 	}
-	prepareDataSummary() {
-		for (let itemData = 0; itemData < this.data.length; itemData++) {
-			let author = this.data[itemData].author
-
-			for (const searchedAuthor of this.authors) {
-				if (searchedAuthor.author.includes(author)) {
-					this.authors.pop(author)
-				}
-			}
-			this.authors.push({ author: author })
+	 prepareDataSummary() {
+		for (let i = 0; i < this.data.length; i++) {
+			this.authors.add(this.data[i].author)
 		}
-		for (let itemData = 0; itemData < this.authors.length; itemData++) {
-			let author = this.authors[itemData].author
-			let titles = 0
-			let totalQuantity = 0
-			let totalRevenue = 0
-			let avgQuantity = 0
-			let avgUnitPrice = 0
+		const authorsArr = [...this.authors]
 
-			dataSummary[itemData] = {
+		for (const [id, author] of authorsArr.entries()) {
+			dataSummary[id] = {
 				author: author,
-				titles: titles,
-				totalQuantity: totalQuantity,
-				totalRevenue: totalRevenue,
-				avgQuantity: avgQuantity,
-				avgUnitPrice: avgUnitPrice,
+				titles: 0,
+				totalQuantity: 0,
+				totalRevenue: 0,
+				avgQuantity: 0,
+				avgUnitPrice: 0,
 			}
 		}
 	}
